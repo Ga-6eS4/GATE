@@ -1,0 +1,30 @@
+# ===== Python / Backend =====
+backend/venv/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# ===== Node / Frontend =====
+frontend/node_modules/
+frontend/dist/
+
+# ===== Dataset (too large for GitHub - link to Kaggle instead in README) =====
+ml/data/
+
+# ===== Trained model files (large binaries - see note in README) =====
+*.keras
+*.h5
+*.pth
+
+# ===== Antigravity backup folders (not part of the final submission) =====
+**/antigravity_backup/
+
+# ===== Jupyter checkpoints =====
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# ===== OS / Editor junk =====
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
