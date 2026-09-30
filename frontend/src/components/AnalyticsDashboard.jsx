@@ -4,7 +4,7 @@ import { checkBackendHealth } from '../services/api';
 
 export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
   const [apiUrl, setApiUrl] = useState('http://localhost:8000/predict');
-  const [latency, setLatency] = useState(24); // ms
+  const [latency, setLatency] = useState(null); // ms - null until a real ping has run
   const [testing, setTesting] = useState(false);
 
   const runLatencyTest = async () => {
@@ -17,7 +17,7 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
       setLatency(duration);
       setServerOnline(true);
     } else {
-      setLatency(0);
+      setLatency(null);
       setServerOnline(false);
     }
     setTesting(false);
@@ -45,8 +45,8 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
           </div>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Dataset Size</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>87,000 Images</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>29 Classes (3k per class)</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>78,000 Images</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>26 Classes (3k per class)</div>
           </div>
         </div>
 
@@ -56,7 +56,7 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
           </div>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Architecture</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>Deep CNN</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>CNN (From Scratch)</div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>TensorFlow / Keras</div>
           </div>
         </div>
@@ -67,8 +67,12 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
           </div>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Inference Speed</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>{latency} ms</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>~30 Frames Per Second</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+              {latency !== null ? `${latency} ms` : '—'}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              {latency !== null ? 'Measured via /health ping' : 'Ping endpoint to measure'}
+            </div>
           </div>
         </div>
 
@@ -78,8 +82,8 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
           </div>
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Target Classes</div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>29 Classes</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>A-Z + del + space + nothing</div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>26 Classes</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>A-Z Alphabet</div>
           </div>
         </div>
 
@@ -97,19 +101,20 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[
-              { layer: 'Input Layer', spec: '200x200x3 RGB Image Tensor', type: 'Rescaling (1./255)' },
+              { layer: 'Input Layer', spec: '64x64x3 RGB Image Tensor', type: 'Rescaling (1./255)' },
               { layer: 'Conv Block 1', spec: '32 Filters (3x3), ReLU Activation + MaxPooling2D (2x2)', type: 'Feature Extraction' },
               { layer: 'Conv Block 2', spec: '64 Filters (3x3), ReLU Activation + MaxPooling2D (2x2)', type: 'Edge & Contour Maps' },
-              { layer: 'Conv Block 3', spec: '128 Filters (3x3), ReLU Activation + MaxPooling2D (2x2)', type: 'Complex Handshape Features' },
-              { layer: 'Dense Dropout', spec: 'Flatten -> Dense (512 Units) + Dropout (0.5)', type: 'Regularization' },
-              { layer: 'Output Softmax', spec: 'Dense (29 Units, Softmax Activation)', type: 'Class Probability Distribution' }
+              { layer: 'Conv Block 3', spec: '128 Filters (3x3), ReLU Activation + MaxPooling2D (2x2)', type: 'Handshape Features' },
+              { layer: 'Conv Block 4', spec: '128 Filters (3x3), ReLU Activation + MaxPooling2D (2x2)', type: 'Complex Handshape Features' },
+              { layer: 'Dense Dropout', spec: 'Flatten -> Dropout (0.5) -> Dense (256 Units, ReLU)', type: 'Regularization' },
+              { layer: 'Output Softmax', spec: 'Dense (26 Units, Softmax Activation)', type: 'Class Probability Distribution' }
             ].map((item, index) => (
               <div
                 key={index}
                 style={{
                   padding: '12px 16px',
                   borderRadius: 'var(--radius-md)',
-                  background: 'rgba(255, 255, 255, 0.03)',
+                  background: 'var(--fill-1)',
                   border: '1px solid var(--surface-glass-border)',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -119,7 +124,7 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#ffffff' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
                     {index + 1}. {item.layer}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{item.spec}</div>
@@ -156,8 +161,8 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
                   fontFamily: 'var(--font-mono)',
                   borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--surface-glass-border)',
-                  background: 'rgba(0,0,0,0.4)',
-                  color: '#ffffff',
+                  background: 'var(--inset-bg)',
+                  color: 'var(--text-primary)',
                   outline: 'none'
                 }}
               />
@@ -174,16 +179,19 @@ export default function AnalyticsDashboard({ serverOnline, setServerOnline }) {
                 {testing ? 'Testing...' : 'Ping Endpoint'}
               </button>
 
-              <button
-                onClick={() => setServerOnline(!serverOnline)}
-                className={serverOnline ? 'btn btn-emerald' : 'btn btn-primary'}
+              {/* Status display only - no longer manually clickable/fakeable.
+                  Real status comes only from runLatencyTest() and the app-wide
+                  health check, never from the user clicking this. */}
+              <div
+                className={serverOnline ? 'btn btn-emerald' : 'btn btn-secondary'}
+                style={{ cursor: 'default', pointerEvents: 'none' }}
               >
-                {serverOnline ? 'Online' : 'Set Active'}
-              </button>
+                {serverOnline ? 'Online' : 'Offline'}
+              </div>
             </div>
 
-            <div style={{ padding: '12px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--surface-glass-border)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              <strong>Status:</strong> {serverOnline ? 'Connected to local FastAPI / PyTorch endpoint' : 'Using browser-side ML fallback classifier simulator'}
+            <div style={{ padding: '12px', borderRadius: 'var(--radius-md)', background: 'var(--fill-1)', border: '1px solid var(--surface-glass-border)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <strong>Status:</strong> {serverOnline ? 'Connected to local FastAPI / TensorFlow endpoint' : 'Backend unreachable - using simulated predictions'}
             </div>
 
           </div>

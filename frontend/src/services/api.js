@@ -12,7 +12,7 @@ export async function checkBackendHealth() {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
-    
+
     const res = await fetch(`${API_BASE_URL}/health`, {
       method: 'GET',
       signal: controller.signal
@@ -100,4 +100,61 @@ export async function translateTextToASL(text) {
     console.warn('Translation API error:', err.message);
     return null;
   }
+}
+/**
+ * Register a new user
+ */
+export async function registerUser(name, email, password) {
+  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || 'Registration failed');
+  }
+  return data; // { access_token, token_type, user }
+}
+
+/**
+ * Log in an existing user
+ */
+export async function loginUser(email, password) {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.detail || 'Login failed');
+  }
+  return data; // { access_token, token_type, user }
+}/**
+ * Request a password reset OTP
+ */
+export async function forgotPassword(email) {
+  const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Request failed');
+  return data;
+}
+
+/**
+ * Reset password using OTP
+ */
+export async function resetPassword(email, otp, newPassword) {
+  const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, otp, new_password: newPassword })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || 'Reset failed');
+  return data;
 }

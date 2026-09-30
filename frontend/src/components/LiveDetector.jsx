@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Camera, 
-  Upload, 
-  Play, 
-  Square, 
-  Volume2, 
-  Delete, 
-  Copy, 
-  RefreshCw, 
+import {
+  Camera,
+  Upload,
+  Play,
+  Square,
+  Volume2,
+  Delete,
+  Copy,
+  RefreshCw,
   Sparkles,
   Layers,
   Check,
@@ -29,13 +29,15 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
   const [autoAppend, setAutoAppend] = useState(true);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [copied, setCopied] = useState(false);
-  
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
   const lastPredictedCharRef = useRef('');
   const consecutiveFramesRef = useRef(0);
   const lastAppendedCharRef = useRef('');
+  const fileInputRef = useRef(null);
+
 
   // Start/Stop Webcam
   const startCamera = async () => {
@@ -181,6 +183,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
       setCurrentPrediction(pred);
       if (soundEnabled) soundFx.playSuccess();
     }
+    e.target.value = ''; // allow re-selecting the same file again
   };
 
   const handleCopyText = () => {
@@ -193,7 +196,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
+
       {/* Top Banner Header */}
       <div style={{
         display: 'flex',
@@ -214,7 +217,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
         {/* Mode Selector */}
         <div style={{
           display: 'flex',
-          background: 'rgba(255,255,255,0.04)',
+          background: 'var(--fill-1)',
           padding: '4px',
           borderRadius: 'var(--radius-md)',
           border: '1px solid var(--surface-glass-border)'
@@ -224,7 +227,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
             className="btn"
             style={{
               background: activeMode === 'webcam' ? 'var(--accent-primary)' : 'transparent',
-              color: '#ffffff',
+              color: activeMode === 'webcam' ? '#ffffff' : 'var(--text-secondary)',
               padding: '6px 14px',
               fontSize: '0.85rem'
             }}
@@ -237,7 +240,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
             className="btn"
             style={{
               background: activeMode === 'upload' ? 'var(--accent-primary)' : 'transparent',
-              color: '#ffffff',
+              color: activeMode === 'upload' ? '#ffffff' : 'var(--text-secondary)',
               padding: '6px 14px',
               fontSize: '0.85rem'
             }}
@@ -250,13 +253,13 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
 
       {/* Main Grid: Video Stream vs Prediction Stats */}
       <div className="grid-detector">
-        
+
         {/* Left Video Container */}
         <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          
+
           {/* Camera Frame */}
           <div className={`camera-frame ${isStreaming ? 'detecting' : ''}`} style={{ height: '420px', position: 'relative' }}>
-            
+
             {/* HUD Corner overlay elements */}
             <div className="camera-hud-corner camera-hud-tl"></div>
             <div className="camera-hud-corner camera-hud-tr"></div>
@@ -277,7 +280,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
                     transform: 'scaleX(-1)'
                   }}
                 />
-                
+
                 {/* Fallback Simulation graphic if actual webcam is inactive or loading */}
                 {(!isStreaming || !videoRef.current?.srcObject) && (
                   <div style={{
@@ -325,6 +328,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
                 )}
               </>
             ) : (
+
               /* Image Upload View */
               <div style={{
                 width: '100%',
@@ -334,29 +338,54 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
                 justifyContent: 'center',
                 position: 'relative'
               }}>
+                {/* File input always mounted, triggered via ref instead of a <label> wrapper */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                />
+
                 {uploadedImage ? (
-                  <img
-                    src={uploadedImage}
-                    alt="Uploaded Sign"
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                  />
+                  <>
+                    <img
+                      src={uploadedImage}
+                      alt="Uploaded Sign"
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="btn btn-secondary"
+                      style={{
+                        position: 'absolute',
+                        bottom: '16px',
+                        right: '16px',
+                        padding: '8px 14px',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      <Upload size={14} /> Change Image
+                    </button>
+                  </>
                 ) : (
-                  <label style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '12px',
-                    cursor: 'pointer',
-                    color: 'var(--text-secondary)'
-                  }}>
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '12px',
+                      cursor: 'pointer',
+                      color: 'var(--text-secondary)'
+                    }}
+                  >
                     <Upload size={48} color="var(--accent-cyan)" />
                     <span>Click or drag image file of hand sign to classify</span>
-                    <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-                  </label>
+                  </div>
                 )}
               </div>
             )}
-
             {/* Top Badge Overlay */}
             <div style={{
               position: 'absolute',
@@ -421,7 +450,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
 
         {/* Right Prediction Analytics Panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          
+
           {/* Main Top Classification Card */}
           <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', position: 'relative' }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '8px' }}>
@@ -433,14 +462,14 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
                 <div style={{
                   fontSize: '4.5rem',
                   fontWeight: 900,
-                  background: 'linear-gradient(135deg, #ffffff 0%, var(--accent-cyan) 100%)',
+                  background: 'linear-gradient(135deg, var(--hero-from) 0%, var(--accent-cyan) 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   lineHeight: 1
                 }}>
                   {currentPrediction.topClass}
                 </div>
-                
+
                 <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <span className="badge badge-emerald">
                     {currentPrediction.confidence}% Confidence
@@ -480,11 +509,11 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
                         {item.probability}%
                       </span>
                     </div>
-                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ height: '6px', background: 'var(--fill-2)', borderRadius: '3px', overflow: 'hidden' }}>
                       <div style={{
                         height: '100%',
                         width: `${item.probability}%`,
-                        background: idx === 0 ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)',
+                        background: idx === 0 ? 'var(--accent-primary)' : 'var(--border-strong)',
                         borderRadius: '3px',
                         transition: 'width 0.3s ease'
                       }} />
@@ -522,7 +551,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
         </div>
 
         <div style={{
-          background: 'rgba(0, 0, 0, 0.4)',
+          background: 'var(--inset-bg)',
           border: '1px solid var(--surface-glass-border)',
           borderRadius: 'var(--radius-md)',
           padding: '16px 20px',
@@ -560,7 +589,7 @@ export default function LiveDetector({ serverOnline, soundEnabled }) {
                   fontFamily: 'var(--font-mono)',
                   borderRadius: '4px',
                   border: '1px solid var(--surface-glass-border)',
-                  background: 'rgba(255,255,255,0.03)',
+                  background: 'var(--fill-1)',
                   color: 'var(--text-secondary)',
                   cursor: 'pointer'
                 }}

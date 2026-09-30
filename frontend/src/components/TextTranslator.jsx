@@ -4,7 +4,7 @@ import { getSignInfo } from '../utils/aslData';
 import { soundFx } from '../utils/sound';
 
 export default function TextTranslator({ soundEnabled }) {
-  const [text, setText] = useState('WELCOME TO SIGN AI');
+  const [text, setText] = useState('WELCOME TO GATE');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [speed, setSpeed] = useState(1); // 0.5 | 1 | 2
@@ -50,7 +50,7 @@ export default function TextTranslator({ soundEnabled }) {
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
+
       {/* Header */}
       <div>
         <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '4px' }}>
@@ -84,8 +84,8 @@ export default function TextTranslator({ soundEnabled }) {
               fontWeight: 600,
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--surface-glass-border)',
-              background: 'rgba(0, 0, 0, 0.4)',
-              color: '#ffffff',
+              background: 'var(--inset-bg)',
+              color: 'var(--text-primary)',
               outline: 'none'
             }}
           />
@@ -100,14 +100,14 @@ export default function TextTranslator({ soundEnabled }) {
 
       {/* Main Animated Display Card */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px' }}>
-        
+
         {/* Active Sign Visualizer Box */}
         <div className="glass-panel" style={{ padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '380px', position: 'relative' }}>
-          
+
           <div style={{
             fontSize: '0.75rem',
             fontWeight: 700,
-            color: 'var(--accent-cyan)',
+            color: 'var(--badge-cyan)',
             letterSpacing: '0.05em',
             marginBottom: '16px',
             background: 'rgba(6, 182, 212, 0.12)',
@@ -118,23 +118,67 @@ export default function TextTranslator({ soundEnabled }) {
             CHARACTER {currentIndex + 1} OF {charList.length || 1}
           </div>
 
-          {/* Large Symbol Banner */}
+          {/* Sign Image Banner - real hand photo, falls back to letter box for space/missing images */}
           <div style={{
-            width: '140px',
-            height: '140px',
+            width: '180px',
+            height: '180px',
             borderRadius: '24px',
             background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%)',
             border: '2px solid var(--accent-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '4.5rem',
-            fontWeight: 900,
-            color: '#ffffff',
+            overflow: 'hidden',
             boxShadow: 'var(--shadow-glow)',
-            marginBottom: '20px'
+            marginBottom: '20px',
+            position: 'relative'
           }}>
-            {currentChar === 'space' ? '␣' : currentChar}
+            {currentChar === 'space' ? (
+              <span style={{ fontSize: '4.5rem', fontWeight: 900, color: 'var(--text-primary)' }}>␣</span>
+            ) : (
+              <img
+                key={currentChar}
+                src={`/asl_signs/${currentChar}.jpg`}
+                alt={`ASL sign for letter ${currentChar}`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                  // Fallback to the plain letter box if an image is missing/fails to load
+                  e.target.style.display = 'none';
+                  e.target.parentElement.querySelector('.letter-fallback').style.display = 'flex';
+                }}
+              />
+            )}
+            <div
+              className="letter-fallback"
+              style={{
+                display: 'none',
+                position: 'absolute',
+                inset: 0,
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '4.5rem',
+                fontWeight: 900,
+                color: 'var(--text-primary)'
+              }}
+            >
+              {currentChar}
+            </div>
+
+            {/* Small badge labeling the letter, since a hand photo alone can be ambiguous */}
+            <div style={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '8px',
+              background: 'rgba(0,0,0,0.65)',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              padding: '2px 10px',
+              borderRadius: '8px',
+              backdropFilter: 'blur(4px)'
+            }}>
+              {currentChar}
+            </div>
           </div>
 
           <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '6px' }}>
@@ -150,7 +194,7 @@ export default function TextTranslator({ soundEnabled }) {
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
-            background: 'rgba(255, 255, 255, 0.04)',
+            background: 'var(--fill-1)',
             padding: '8px 20px',
             borderRadius: 'var(--radius-full)',
             border: '1px solid var(--surface-glass-border)'
@@ -241,7 +285,7 @@ export default function TextTranslator({ soundEnabled }) {
                   justifyContent: 'space-between',
                   padding: '10px 14px',
                   borderRadius: 'var(--radius-md)',
-                  background: idx === currentIndex ? 'rgba(99, 102, 241, 0.18)' : 'rgba(255, 255, 255, 0.02)',
+                  background: idx === currentIndex ? 'rgba(99, 102, 241, 0.18)' : 'var(--fill-1)',
                   border: idx === currentIndex ? '1px solid var(--accent-primary)' : '1px solid var(--surface-glass-border)',
                   cursor: 'pointer',
                   transition: 'var(--transition)'
@@ -252,17 +296,17 @@ export default function TextTranslator({ soundEnabled }) {
                     width: '28px',
                     height: '28px',
                     borderRadius: '8px',
-                    background: idx === currentIndex ? 'var(--accent-primary)' : 'rgba(255,255,255,0.06)',
+                    background: idx === currentIndex ? 'var(--accent-primary)' : 'var(--fill-2)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '0.9rem',
                     fontWeight: 800,
-                    color: '#fff'
+                    color: idx === currentIndex ? '#ffffff' : 'var(--text-primary)'
                   }}>
                     {ch === 'space' ? '␣' : ch}
                   </span>
-                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: idx === currentIndex ? '#fff' : 'var(--text-secondary)' }}>
+                  <span style={{ fontSize: '0.875rem', fontWeight: 600, color: idx === currentIndex ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                     {ch === 'space' ? 'Space Bar' : `Letter ${ch}`}
                   </span>
                 </div>

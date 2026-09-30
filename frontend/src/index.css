@@ -1,54 +1,122 @@
 /* ==========================================================================
-   SignAI - Premium Dark Design System & Layout Engine
+   GATE - Premium Design System & Layout Engine (Dark + Light themes)
+   Theme is switched by data-theme="dark|light" on <html>
    ========================================================================== */
 
 :root {
-  /* Color Palette - Vibrant Dark Mode */
+  color-scheme: dark;
+
+  /* Color Palette - Dark */
   --bg-primary: #07090e;
   --bg-secondary: #0d111a;
   --bg-tertiary: #131926;
-  
+
   --surface-glass: rgba(19, 25, 38, 0.65);
   --surface-glass-border: rgba(255, 255, 255, 0.08);
   --surface-glass-hover: rgba(255, 255, 255, 0.12);
   --surface-card: #151c2b;
-  
+
   --accent-primary: #6366f1;
   --accent-primary-hover: #4f46e5;
   --accent-glow: rgba(99, 102, 241, 0.35);
-  
+
   --accent-cyan: #06b6d4;
   --accent-cyan-glow: rgba(6, 182, 212, 0.35);
-  
+
   --accent-emerald: #10b981;
   --accent-emerald-glow: rgba(16, 185, 129, 0.3);
-  
+
   --accent-rose: #f43f5e;
   --accent-amber: #f59e0b;
   --accent-purple: #8b5cf6;
-  
+
   /* Text Colors */
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   --text-inverse: #090d16;
-  
+
+  /* Theme tokens (replace hardcoded colors) */
+  --fill-1: rgba(255, 255, 255, 0.04);
+  --fill-2: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --nav-bg: rgba(7, 9, 14, 0.85);
+  --scrollbar-thumb: #1e293b;
+  --title-gradient: linear-gradient(90deg, #ffffff 0%, #cbd5e1 100%);
+  --badge-indigo: #818cf8;
+  --badge-cyan: #22d3ee;
+  --badge-emerald: #34d399;
+  --badge-amber: #fbbf24;
+  --hero-from: #ffffff;
+  --inset-bg: rgba(0, 0, 0, 0.4);
+  --footer-bg: rgba(7, 9, 14, 0.9);
+
   /* Typography */
   --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  
+
   /* Shadows & Effects */
   --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 10px 30px rgba(0,0,0,0.5);
   --shadow-glow: 0 0 25px var(--accent-glow);
-  
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
   --radius-full: 9999px;
-  
+
   --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-primary: #f6f7fb;
+  --bg-secondary: #eef0f7;
+  --bg-tertiary: #e4e8f3;
+
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --surface-glass-border: rgba(15, 23, 42, 0.10);
+  --surface-glass-hover: rgba(15, 23, 42, 0.06);
+  --surface-card: #ffffff;
+
+  --accent-primary: #4f46e5;
+  --accent-primary-hover: #4338ca;
+  --accent-glow: rgba(79, 70, 229, 0.25);
+
+  --accent-cyan: #0891b2;
+  --accent-cyan-glow: rgba(8, 145, 178, 0.25);
+
+  --accent-emerald: #059669;
+  --accent-emerald-glow: rgba(5, 150, 105, 0.25);
+
+  --accent-rose: #e11d48;
+  --accent-amber: #d97706;
+  --accent-purple: #7c3aed;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #f8fafc;
+
+  --fill-1: rgba(15, 23, 42, 0.04);
+  --fill-2: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.22);
+  --nav-bg: rgba(246, 247, 251, 0.85);
+  --scrollbar-thumb: #cbd5e1;
+  --title-gradient: linear-gradient(90deg, #0f172a 0%, #475569 100%);
+  --badge-indigo: #4338ca;
+  --badge-cyan: #0e7490;
+  --badge-emerald: #047857;
+  --badge-amber: #b45309;
+  --hero-from: #4f46e5;
+  --inset-bg: rgba(15, 23, 42, 0.05);
+  --footer-bg: #eef0f7;
+
+  --shadow-sm: 0 2px 4px rgba(15,23,42,0.08);
+  --shadow-md: 0 4px 12px rgba(15,23,42,0.10);
+  --shadow-lg: 0 10px 30px rgba(15,23,42,0.12);
 }
 
 /* Reset & Base */
@@ -86,7 +154,7 @@ html, body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--scrollbar-thumb);
   border-radius: var(--radius-full);
 }
 
@@ -110,7 +178,7 @@ h1, h2, h3, h4, h5, h6 {
   right: 0;
   bottom: 0;
   z-index: -1;
-  background: 
+  background:
     radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 45%),
     radial-gradient(circle at 85% 25%, rgba(6, 182, 212, 0.10) 0%, transparent 45%),
     radial-gradient(circle at 50% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
@@ -170,15 +238,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--fill-1);
   color: var(--text-primary);
   border: 1px solid var(--surface-glass-border);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  background: var(--fill-2);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
 
 .btn-emerald {
@@ -211,7 +279,7 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-icon:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--fill-2);
 }
 
 /* Badge System */
@@ -229,25 +297,25 @@ h1, h2, h3, h4, h5, h6 {
 
 .badge-indigo {
   background: rgba(99, 102, 241, 0.15);
-  color: #818cf8;
+  color: var(--badge-indigo);
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
 .badge-cyan {
   background: rgba(6, 182, 212, 0.15);
-  color: #22d3ee;
+  color: var(--badge-cyan);
   border: 1px solid rgba(6, 182, 212, 0.3);
 }
 
 .badge-emerald {
   background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  color: var(--badge-emerald);
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .badge-amber {
   background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  color: var(--badge-amber);
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
@@ -287,13 +355,13 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Live Camera Visual Overlay Effects */
+/* Live Camera Visual Overlay Effects (stays dark in both themes) */
 .camera-frame {
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
   background-color: #030407;
-  border: 2px solid var(--surface-glass-border);
+  border: 2px solid rgba(255, 255, 255, 0.08);
   box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
 }
 
@@ -361,4 +429,39 @@ h1, h2, h3, h4, h5, h6 {
   .grid-detector {
     grid-template-columns: 1fr;
   }
+}
+
+/* Navbar: keep one line. Labels collapse to icons (active tab keeps its label)
+   when space runs out. Admin adds a 6th tab, so it collapses earlier. */
+@media (max-width: 1560px) {
+  .nav-status-text { display: none; }
+}
+@media (max-width: 1720px) {
+  .nav-many .nav-item:not(.is-active) .nav-label { display: none; }
+}
+@media (max-width: 1300px) {
+  .nav-item:not(.is-active) .nav-label { display: none; }
+}
+
+/* Camera area always uses the dark palette, so badges, hints and HUD
+   text stay readable on the dark video frame in both themes */
+.camera-frame {
+  color-scheme: dark;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --surface-glass: rgba(19, 25, 38, 0.65);
+  --surface-glass-border: rgba(255, 255, 255, 0.08);
+  --fill-1: rgba(255, 255, 255, 0.04);
+  --fill-2: rgba(255, 255, 255, 0.08);
+  --accent-primary: #6366f1;
+  --accent-cyan: #06b6d4;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+  --badge-indigo: #818cf8;
+  --badge-cyan: #22d3ee;
+  --badge-emerald: #34d399;
+  --badge-amber: #fbbf24;
+  color: var(--text-primary);
 }

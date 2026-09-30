@@ -2,10 +2,52 @@ import React, { useState } from 'react';
 import { Search, Filter, BookOpen, Hand, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { ASL_DICTIONARY } from '../utils/aslData';
 
+// Entries with no real training photo available - fall back to the plain
+// letter/symbol display instead of trying to load an image for these.
+const NO_PHOTO = new Set(['space', 'del', 'nothing']);
+
+function SignThumb({ item, size = 56, fontSize = '2.5rem', selected = false }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const showPhoto = !NO_PHOTO.has(item.symbol) && !imgFailed;
+
+  return (
+    <div style={{
+      width: size,
+      height: size,
+      borderRadius: '14px',
+      overflow: 'hidden',
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--fill-1)',
+      marginBottom: '8px'
+    }}>
+      {showPhoto ? (
+        <img
+          src={`/asl_signs/${item.symbol.toUpperCase()}.jpg`}
+          alt={`ASL sign for ${item.name}`}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <span style={{
+          fontSize,
+          fontWeight: 900,
+          color: selected ? 'var(--accent-cyan)' : 'var(--text-primary)'
+        }}>
+          {item.symbol === 'space' ? '␣' : item.symbol}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function SignDictionary({ onSelectSignForPractice }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All'); // 'All' | 'Alphabet' | 'Action'
   const [selectedSign, setSelectedSign] = useState(ASL_DICTIONARY[0]);
+  const [detailImgFailed, setDetailImgFailed] = useState(false);
 
   const filteredDictionary = ASL_DICTIONARY.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -14,6 +56,8 @@ export default function SignDictionary({ onSelectSignForPractice }) {
     const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const showDetailPhoto = !NO_PHOTO.has(selectedSign.symbol) && !detailImgFailed;
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -45,8 +89,8 @@ export default function SignDictionary({ onSelectSignForPractice }) {
               fontSize: '0.9rem',
               borderRadius: 'var(--radius-md)',
               border: '1px solid var(--surface-glass-border)',
-              background: 'rgba(0, 0, 0, 0.4)',
-              color: '#ffffff',
+              background: 'var(--inset-bg)',
+              color: 'var(--text-primary)',
               outline: 'none'
             }}
           />
@@ -60,7 +104,7 @@ export default function SignDictionary({ onSelectSignForPractice }) {
               onClick={() => setActiveCategory(cat)}
               className="btn"
               style={{
-                background: activeCategory === cat ? 'var(--accent-primary)' : 'rgba(255,255,255,0.04)',
+                background: activeCategory === cat ? 'var(--accent-primary)' : 'var(--fill-1)',
                 color: activeCategory === cat ? '#ffffff' : 'var(--text-secondary)',
                 padding: '6px 14px',
                 fontSize: '0.825rem'
@@ -95,14 +139,7 @@ export default function SignDictionary({ onSelectSignForPractice }) {
                   background: isSelected ? 'rgba(99, 102, 241, 0.15)' : 'var(--surface-glass)'
                 }}
               >
-                <div style={{
-                  fontSize: '2.5rem',
-                  fontWeight: 900,
-                  color: isSelected ? 'var(--accent-cyan)' : '#ffffff',
-                  marginBottom: '8px'
-                }}>
-                  {item.symbol === 'space' ? '␣' : item.symbol}
-                </div>
+                <SignThumb item={item} size={64} fontSize="2.2rem" selected={isSelected} />
 
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, textAlign: 'center', marginBottom: '4px' }}>
                   {item.name}
@@ -118,17 +155,38 @@ export default function SignDictionary({ onSelectSignForPractice }) {
 
         {/* Selected Sign Details Sidebar */}
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{
-            fontSize: '5rem',
-            fontWeight: 900,
-            textAlign: 'center',
-            background: 'linear-gradient(135deg, #ffffff 0%, var(--accent-cyan) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            lineHeight: 1
-          }}>
-            {selectedSign.symbol === 'space' ? '␣' : selectedSign.symbol}
-          </div>
+          
+          {showDetailPhoto ? (
+            <div style={{
+              width: '160px',
+              height: '160px',
+              margin: '0 auto',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              border: '2px solid var(--accent-primary)',
+              boxShadow: 'var(--shadow-glow)'
+            }}>
+              <img
+                key={selectedSign.symbol}
+                src={`/asl_signs/${selectedSign.symbol.toUpperCase()}.jpg`}
+                alt={`ASL sign for ${selectedSign.name}`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={() => setDetailImgFailed(true)}
+              />
+            </div>
+          ) : (
+            <div style={{
+              fontSize: '5rem',
+              fontWeight: 900,
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, var(--hero-from) 0%, var(--accent-cyan) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              lineHeight: 1
+            }}>
+              {selectedSign.symbol === 'space' ? '␣' : selectedSign.symbol}
+            </div>
+          )}
 
           <div style={{ textAlign: 'center' }}>
             <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>{selectedSign.name}</h2>

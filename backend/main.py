@@ -2,7 +2,7 @@
 =============================================================================
 G.A.T.E - Gesture And Text Engine
 American Sign Language (ASL) Alphabet Recognition - FastAPI Backend
-TensorFlow / Keras Model Inference Server
+TensorFlow / Keras Model Inference Server + PostgreSQL User Auth
 =============================================================================
 """
 
@@ -14,23 +14,30 @@ from typing import Optional
 
 import numpy as np
 from PIL import Image
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel, EmailStr
+from sqlalchemy.orm import Session
 import tensorflow as tf
 
+from database import engine, get_db, Base
+from models import User, PasswordResetOTP
+from auth import hash_password, verify_password, create_access_token, decode_access_token, generate_otp
+from datetime import datetime, timedelta, timezone
+from mailer import send_otp_email
 # -----------------------------------------------------------------------------
 # App setup
 # -----------------------------------------------------------------------------
 
 app = FastAPI(
     title="G.A.T.E - ASL Recognition Backend",
-    description="REST + WebSocket API for real-time American Sign Language "
-                 "alphabet recognition, powered by a from-scratch TensorFlow CNN.",
+    description="REST API for real-time American Sign Language alphabet "
+                 "recognition, powered by a from-scratch TensorFlow CNN, "
+                 "with PostgreSQL-backed user accounts.",
     version="1.0.0"
 )
 
-# Allow the React frontend (different port) to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],       # tighten this to your frontend's exact URL before deployment
@@ -39,14 +46,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Creates the users / practice_sessions / prediction_logs tables if they
+# don't already exist in your Neon database. Safe to run every startup -
+# it does nothing if the tables are already there.
+Base.metadata.create_all(bind=engine)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
 # -----------------------------------------------------------------------------
 # Constants - must match how the model was trained
 # -----------------------------------------------------------------------------
 
-IMG_SIZE = (64, 64)  # matches training: img_size = (64, 64)
+IMG_SIZE = (64, 64)
 
-# Alphabetical order - matches image_dataset_from_directory's default sorting
-# when space/del/nothing were excluded during training
+
 ASL_CLASSES = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
     'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
@@ -54,6 +67,8 @@ ASL_CLASSES = [
 ]
 
 SERVER_START_TIME = time.time()
+
+OTP_EXPIRE_MINUTES = 10
 
 # -----------------------------------------------------------------------------
 # Model loading
@@ -71,7 +86,7 @@ except Exception as e:
     print(f"WARNING: Failed to load model from {MODEL_PATH}: {e}")
 
 # -----------------------------------------------------------------------------
-# Request schemas
+# Request / response schemas
 # -----------------------------------------------------------------------------
 
 class Base64PredictRequest(BaseModel):
@@ -83,12 +98,165 @@ class TranslateRequest(BaseModel):
     text: str
 
 
+class RegisterRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+
+
+class UserOut(BaseModel):
+    id: int
+    name: str
+    email: str
+
+    class Config:
+        from_attributes = True
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
+
+
 # -----------------------------------------------------------------------------
-# Helpers
+# Auth dependency - use in any route that needs a logged-in user
+# -----------------------------------------------------------------------------
+
+def get_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> User:
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    payload = decode_access_token(token)
+    if payload is None or "user_id" not in payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = db.query(User).filter(User.id == payload["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return user
+
+
+# -----------------------------------------------------------------------------
+# Auth routes
+# -----------------------------------------------------------------------------
+
+@app.post("/auth/register", response_model=TokenResponse)
+def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.email == payload.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="An account with this email already exists.")
+
+    new_user = User(
+        name=payload.name,
+        email=payload.email,
+        hashed_password=hash_password(payload.password)
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    token = create_access_token({"user_id": new_user.id})
+    return TokenResponse(access_token=token, user=UserOut.model_validate(new_user))
+
+
+@app.post("/auth/login", response_model=TokenResponse)
+def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user or not verify_password(payload.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect email or password.")
+
+    token = create_access_token({"user_id": user.id})
+    return TokenResponse(access_token=token, user=UserOut.model_validate(user))
+
+
+@app.get("/auth/me", response_model=UserOut)
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+ADMIN_EMAILS = {"bhandariganesh2059@gmail.com"}  # add more emails here if needed
+
+
+@app.get("/admin/users", response_model=list[UserOut])
+def list_all_users(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.email not in ADMIN_EMAILS:
+        raise HTTPException(status_code=403, detail="Not authorized to view this resource.")
+
+    users = db.query(User).order_by(User.id).all()
+    return users
+@app.post("/auth/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+
+    # Always return the same generic message, whether or not the email exists -
+    # this avoids leaking which emails are registered in the system.
+    if user:
+        otp_code = generate_otp()
+        expires_at = datetime.utcnow() + timedelta(minutes=OTP_EXPIRE_MINUTES)
+        otp_entry = PasswordResetOTP(user_id=user.id, otp_code=otp_code, expires_at=expires_at)
+        db.add(otp_entry)
+        db.commit()
+        send_otp_email(user.email, otp_code, user.name)
+
+    return {"message": "If an account with that email exists, a reset code has been sent."}
+
+
+@app.post("/auth/reset-password")
+def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired code.")
+
+    otp_entry = (
+        db.query(PasswordResetOTP)
+        .filter(
+            PasswordResetOTP.user_id == user.id,
+            PasswordResetOTP.otp_code == payload.otp,
+            PasswordResetOTP.used == False,
+        )
+        .order_by(PasswordResetOTP.created_at.desc())
+        .first()
+    )
+
+    if not otp_entry or otp_entry.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Invalid or expired code.")
+
+    user.hashed_password = hash_password(payload.new_password)
+    otp_entry.used = True
+    db.commit()
+
+    return {"message": "Password has been reset successfully."}
+
+# -----------------------------------------------------------------------------
+# Helpers for ASL prediction
 # -----------------------------------------------------------------------------
 
 def preprocess_pil_image(image_bytes: bytes) -> Image.Image:
-    """Decode raw bytes into a clean RGB PIL image."""
     try:
         img = Image.open(io.BytesIO(image_bytes))
         if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
@@ -102,18 +270,16 @@ def preprocess_pil_image(image_bytes: bytes) -> Image.Image:
 
 
 def classify_image(pil_img: Image.Image, hint_class: Optional[str] = None) -> dict:
-    """Run a PIL image through the TensorFlow model and return prediction info."""
     if not MODEL_LOADED:
         raise HTTPException(status_code=503, detail="Model is not loaded on the server.")
 
     t0 = time.time()
 
-    # Resize to training input size, normalize 0-255 -> 0-1, add batch dimension
     img_resized = pil_img.resize(IMG_SIZE)
     img_array = np.array(img_resized, dtype=np.float32) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)  # shape: (1, 64, 64, 3)
+    img_array = np.expand_dims(img_array, axis=0)
 
-    probabilities = MODEL.predict(img_array, verbose=0)[0]  # softmax output, shape: (26,)
+    probabilities = MODEL.predict(img_array, verbose=0)[0]
 
     inference_ms = round((time.time() - t0) * 1000.0, 1)
 
@@ -143,7 +309,7 @@ def classify_image(pil_img: Image.Image, hint_class: Optional[str] = None) -> di
 
 
 # -----------------------------------------------------------------------------
-# Routes
+# Core routes
 # -----------------------------------------------------------------------------
 
 @app.get("/")
@@ -172,7 +338,6 @@ def health_check():
 
 @app.post("/predict")
 async def predict_file(file: UploadFile = File(...)):
-    """Predict ASL letter from an uploaded image file (multipart/form-data)."""
     contents = await file.read()
     pil_img = preprocess_pil_image(contents)
     return classify_image(pil_img)
@@ -180,7 +345,6 @@ async def predict_file(file: UploadFile = File(...)):
 
 @app.post("/predict/base64")
 async def predict_base64(payload: Base64PredictRequest):
-    """Predict ASL letter from a base64 image (used for the live webcam stream)."""
     try:
         raw_data = payload.image_base64
         if "," in raw_data:
@@ -196,7 +360,6 @@ async def predict_base64(payload: Base64PredictRequest):
 
 @app.post("/translate")
 def translate_text(payload: TranslateRequest):
-    """Turn an English phrase into a sequence of ASL fingerspelling letters."""
     cleaned_chars = [c.upper() for c in payload.text if c.isalpha()]
     return {
         "original_text": payload.text,
@@ -207,7 +370,6 @@ def translate_text(payload: TranslateRequest):
 
 @app.get("/dictionary")
 def get_dictionary():
-    """Return the list of ASL letters this model can recognize."""
     return {
         "total": len(ASL_CLASSES),
         "classes": ASL_CLASSES
